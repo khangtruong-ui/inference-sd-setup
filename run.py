@@ -84,11 +84,5 @@ for prompts in promptss:
     directory = save_dir + '/' + random_string()
     images = generate_from_prompts(pipeline, params, prompts)
     save_images(images, prompts, directory)
-    subprocess.run(f'gsutil -m cp -r {directory} {gcs_dir}/generated/', shell=True)
-    subprocess.run(f'gsutil cp checklist.txt {gcs_dir}/checklist.txt', shell=True)
-    
-    
-    
-
-
-
+    subprocess.run(f'gsutil -m cp -r {directory} {gcs_dir}/generated/ &', shell=True)
+    subprocess.run(f'gsutil cp checklist.txt {gcs_dir}/checklist.txt &', shell=True)

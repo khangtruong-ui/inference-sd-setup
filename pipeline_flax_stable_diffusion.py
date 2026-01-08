@@ -167,7 +167,6 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             feature_extractor=feature_extractor,
         )
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1) if getattr(self, "vae", None) else 8
-        self.jit_func = None
 
     def prepare_inputs(self, prompt: Union[str, List[str]]):
         if not isinstance(prompt, (str, list)):
@@ -250,7 +249,7 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
         context = jnp.concatenate([negative_prompt_embeds, prompt_embeds])
 
         # Ensure model output will be `float32` before going into the scheduler
-        guidance_scale = jnp.array(guidance_scale, dtype=jnp.float32)[None, :, None, None]
+        guidance_scale = jnp.array([guidance_scale], dtype=jnp.float32)
 
         latents_shape = (
             batch_size,
@@ -264,9 +263,7 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             if latents.shape != latents_shape:
                 raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {latents_shape}")
 
-        @jax.jit
         def loop_body(step, args):
-            print('Tracing loop body')
             latents, scheduler_state = args
             # For classifier free guidance, we need to do two forward passes.
             # Here we concatenate the unconditional and text embeddings into a single batch
@@ -277,6 +274,7 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             timestep = jnp.broadcast_to(t, latents_input.shape[0])
 
             latents_input = self.scheduler.scale_model_input(scheduler_state, latents_input, t)
+
             # predict the noise residual
             noise_pred = self.unet.apply(
                 {"params": params["unet"]},
@@ -286,13 +284,11 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             ).sample
             # perform guidance
             noise_pred_uncond, noise_prediction_text = jnp.split(noise_pred, 2, axis=0)
-            noise_pred = noise_pred_uncond + guidance_scale[..., None] * (noise_prediction_text - noise_pred_uncond)
+            noise_pred = noise_pred_uncond + guidance_scale * (noise_prediction_text - noise_pred_uncond)
 
             # compute the previous noisy sample x_t -> x_t-1
             latents, scheduler_state = self.scheduler.step(scheduler_state, noise_pred, t, latents).to_tuple()
             return latents, scheduler_state
-
-        self.jit_func = self.jit_func if self.jit_func is not None else loop_body
 
         scheduler_state = self.scheduler.set_timesteps(
             params["scheduler"], num_inference_steps=num_inference_steps, shape=latents.shape
@@ -304,16 +300,9 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
         if DEBUG:
             # run with python for loop
             for i in range(num_inference_steps):
-                latents, scheduler_state = self.jit_func(i, (latents, scheduler_state))
+                latents, scheduler_state = loop_body(i, (latents, scheduler_state))
         else:
-            def foo(x):
-                try:
-                    return x.shape
-                except:
-                    return x
-                    
-            print('Scheduler state', jax.tree.map(foo, scheduler_state))
-            latents, _ = jax.lax.fori_loop(0, num_inference_steps, self.jit_func, (latents, scheduler_state))
+            latents, _ = jax.lax.fori_loop(0, num_inference_steps, loop_body, (latents, scheduler_state))
 
         # scale and decode the image latents with vae
         latents = 1 / self.vae.config.scaling_factor * latents
@@ -422,6 +411,12 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             images_uint8_casted = np.asarray(images_uint8_casted).reshape(batch_size, height, width, 3)
             images_uint8_casted, has_nsfw_concept = self._run_safety_checker(images_uint8_casted, safety_params, jit)
             images = np.asarray(images).copy()
+
+            # block images
+            if any(has_nsfw_concept):
+                for i, is_nsfw in enumerate(has_nsfw_concept):
+                    if is_nsfw:
+                        images[i, 0] = np.asarray(images_uint8_casted[i])
 
             images = images.reshape(batch_size, height, width, 3)
         else:

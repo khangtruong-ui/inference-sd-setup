@@ -58,7 +58,8 @@ def save_images(images, prompts, save_dir):
             writer.writerow(dict(image=name, caption=prompt))
 
 def load_prompts():
-    with open('checklist.txt') as f:
+    with open('checklist.txt', 'a+') as f:
+        f.seek(0)
         check_list = f.read().split()
         print(f'Found {len(check_list)} processed files')
 

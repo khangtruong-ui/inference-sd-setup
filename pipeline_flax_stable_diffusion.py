@@ -286,7 +286,7 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             ).sample
             # perform guidance
             noise_pred_uncond, noise_prediction_text = jnp.split(noise_pred, 2, axis=0)
-            noise_pred = noise_pred_uncond + guidance_scale * (noise_prediction_text - noise_pred_uncond)
+            noise_pred = noise_pred_uncond + guidance_scale[..., None] * (noise_prediction_text - noise_pred_uncond)
 
             # compute the previous noisy sample x_t -> x_t-1
             latents, scheduler_state = self.scheduler.step(scheduler_state, noise_pred, t, latents).to_tuple()
@@ -300,6 +300,7 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
 
         # scale the initial noise by the standard deviation required by the scheduler
         latents = latents * params["scheduler"].init_noise_sigma
+        print(f'LATENT_SHAPE: {latents.shape}')
 
         if DEBUG:
             # run with python for loop

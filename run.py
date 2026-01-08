@@ -38,7 +38,7 @@ def generate_from_prompts(pipeline, params, prompts: list[str]):
     key, subkey = jax.random.split(key)
     prompt_ids = pipeline.prepare_inputs(prompts)
     prompt_ids = jax.device_put(prompt_ids, sharding)
-    images = pipeline(prompt_ids, params, subkey, num_inference_steps=20, guidance_scale=7.5)
+    images = pipeline(prompt_ids, params, subkey, num_inference_steps=20, guidance_scale=np.array([7.5]))
     images = images.images.reshape((images.images.shape[0],) + images.images.shape[-3:])
     out = [Image.fromarray((image * 255.).astype(np.uint8)) for image in images]
     return out

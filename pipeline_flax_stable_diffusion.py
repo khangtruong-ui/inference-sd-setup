@@ -306,7 +306,13 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             for i in range(num_inference_steps):
                 latents, scheduler_state = self.jit_func(i, (latents, scheduler_state))
         else:
-            print('Scheduler state', jax.tree.map(lambda x: x.shape, scheduler_state))
+            def foo(x):
+                try:
+                    return x.shape
+                except:
+                    return x
+                    
+            print('Scheduler state', jax.tree.map(foo, scheduler_state))
             latents, _ = jax.lax.fori_loop(0, num_inference_steps, self.jit_func, (latents, scheduler_state))
 
         # scale and decode the image latents with vae

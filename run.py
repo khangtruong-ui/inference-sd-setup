@@ -50,7 +50,7 @@ def random_string(length=64):
 
 def save_images(images, prompts, save_dir):
     with open(save_dir + f'/{random_string()}.csv', 'w') as f:
-        writer = csv.DictWriter(csvfile, fieldnames=['image', 'caption'])
+        writer = csv.DictWriter(f, fieldnames=['image', 'caption'])
         writer.writeheader() 
         for image, prompt in zip(images, prompts):
             name = random_string() + '.png'

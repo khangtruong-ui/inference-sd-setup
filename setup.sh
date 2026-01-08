@@ -7,5 +7,5 @@ cp pipeline_flax_stable_diffusion.py "$DIFF_PATH/diffusers/pipelines/stable_diff
 gsutil cp $GCS_DIR/checklist.txt .
 mkdir -p ./sd-finetune
 gsutil -m cp -r gs://khang-sd-ft/full/ .
-mv full sd-finetuned
+mv full sd-finetune
 mkdir -p $SAVE_DIR

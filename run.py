@@ -28,7 +28,7 @@ no_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec())
 
 def load_model():
     pipeline, params = FlaxStableDiffusionPipeline.from_pretrained(
-        './sd-full-finetuned'
+        'KhangTruong/SD-NWPU'
     )
     params = jax.tree.map(lambda x: jax.device_put(x, no_sharding), params)
     return pipeline, params

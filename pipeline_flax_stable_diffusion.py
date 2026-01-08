@@ -1,5 +1,3 @@
-%%writefile ~/.local/lib/python3.11/site-packages/diffusers/pipelines/stable_diffusion/pipeline_flax_stable_diffusion.py 
-
 # Copyright 2025 The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

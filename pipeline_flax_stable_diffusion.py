@@ -167,6 +167,7 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             feature_extractor=feature_extractor,
         )
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1) if getattr(self, "vae", None) else 8
+        self.jit_func = None
 
     def prepare_inputs(self, prompt: Union[str, List[str]]):
         if not isinstance(prompt, (str, list)):
@@ -290,6 +291,7 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             latents, scheduler_state = self.scheduler.step(scheduler_state, noise_pred, t, latents).to_tuple()
             return latents, scheduler_state
 
+        self.jit_func = self.jit_func if self.jit_func is not None else loop_body
         scheduler_state = self.scheduler.set_timesteps(
             params["scheduler"], num_inference_steps=num_inference_steps, shape=latents.shape
         )
@@ -300,9 +302,9 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
         if DEBUG:
             # run with python for loop
             for i in range(num_inference_steps):
-                latents, scheduler_state = loop_body(i, (latents, scheduler_state))
+                latents, scheduler_state = self.jit_func(i, (latents, scheduler_state))
         else:
-            latents, _ = jax.lax.fori_loop(0, num_inference_steps, loop_body, (latents, scheduler_state))
+            latents, _ = jax.lax.fori_loop(0, num_inference_steps, self.jit_func, (latents, scheduler_state))
 
         # scale and decode the image latents with vae
         latents = 1 / self.vae.config.scaling_factor * latents

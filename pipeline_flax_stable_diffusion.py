@@ -266,6 +266,7 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
 
         @jax.jit
         def loop_body(step, args):
+            print('Tracing loop body')
             latents, scheduler_state = args
             # For classifier free guidance, we need to do two forward passes.
             # Here we concatenate the unconditional and text embeddings into a single batch
@@ -276,7 +277,6 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             timestep = jnp.broadcast_to(t, latents_input.shape[0])
 
             latents_input = self.scheduler.scale_model_input(scheduler_state, latents_input, t)
-
             # predict the noise residual
             noise_pred = self.unet.apply(
                 {"params": params["unet"]},
@@ -299,8 +299,7 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
         )
 
         # scale the initial noise by the standard deviation required by the scheduler
-        latents = latents * params["scheduler"].init_noise_sigma
-        print(f'LATENT_SHAPE: {latents.shape}')
+        latents = latents[None, ...] * params["scheduler"].init_noise_sigma
 
         if DEBUG:
             # run with python for loop

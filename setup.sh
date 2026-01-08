@@ -5,4 +5,6 @@ echo "INSTALLED DIFFUSER: $DIFF_PATH"
 
 cp pipeline_flax_stable_diffusion.py "$DIFF_PATH/diffusers/pipelines/stable_diffusion"
 gsutil cp $GCS_DIR/checklist.txt .
+mkdir -p ./sd-finetune
+gsutil -m cp -r gs://khang-sd-ft/full ./sd-finetune
 mkdir -p $SAVE_DIR

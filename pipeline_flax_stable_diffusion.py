@@ -381,17 +381,31 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
                 # Assume sharded
                 guidance_scale = guidance_scale[:, None]
 
-        images = self._generate(
-            prompt_ids,
-            params,
-            prng_seed,
-            num_inference_steps,
-            height,
-            width,
-            guidance_scale,
-            latents,
-            neg_prompt_ids,
-        )
+        if jit:
+            images = _p_generate(
+                self,
+                prompt_ids,
+                params,
+                prng_seed,
+                num_inference_steps,
+                height,
+                width,
+                guidance_scale,
+                latents,
+                neg_prompt_ids,
+            )
+        else:
+            images = self._generate(
+                prompt_ids,
+                params,
+                prng_seed,
+                num_inference_steps,
+                height,
+                width,
+                guidance_scale,
+                latents,
+                neg_prompt_ids,
+            )
 
         if self.safety_checker is not None:
             safety_params = params["safety_checker"]

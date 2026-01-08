@@ -2,8 +2,8 @@ import os
 import argparse
 
 parser = argparse.ArgumentParser(description="Inferencer")
-parser.add_argument("gcs_dir", type=str, help="GCS directory")
-parser.add_argument("save_dir", type=str, help="save_directory")
+parser.add_argument("-gcs_dir", type=str, help="GCS directory")
+parser.add_argument("-save_dir", type=str, help="save_directory")
 args = parser.parse_args()
 
 gcs_dir = args.gcs_dir

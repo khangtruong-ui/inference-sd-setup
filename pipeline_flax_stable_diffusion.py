@@ -299,13 +299,14 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
         )
 
         # scale the initial noise by the standard deviation required by the scheduler
-        latents = latents[None, ...] * params["scheduler"].init_noise_sigma
+        latents = latents * params["scheduler"].init_noise_sigma
 
         if DEBUG:
             # run with python for loop
             for i in range(num_inference_steps):
                 latents, scheduler_state = self.jit_func(i, (latents, scheduler_state))
         else:
+            print('Scheduler state', scheduler_state.shape)
             latents, _ = jax.lax.fori_loop(0, num_inference_steps, self.jit_func, (latents, scheduler_state))
 
         # scale and decode the image latents with vae

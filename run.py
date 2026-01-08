@@ -73,7 +73,7 @@ def load_prompts():
         return all(existing_file not in check_list for existing_file in example['raw_filename'])
         
     ds = load_dataset('KhangTruong/NWPU_Split')['train']
-    iterables = ds.iter(batch_size=64, drop_last_batch=True)
+    iterables = ds.iter(batch_size=32, drop_last_batch=True)
     return map(mapper, filter(filter_out, iterables))
 
 pipeline, params = load_model()

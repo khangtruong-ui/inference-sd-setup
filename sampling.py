@@ -15,8 +15,6 @@ from diffusers import FlaxStableDiffusionPipeline
 import jax
 from PIL import Image
 import numpy as np
-import random
-import string
 import csv
 import subprocess
 from datasets import load_dataset
@@ -33,56 +31,41 @@ def load_model():
     params = jax.tree.map(lambda x: jax.device_put(x, no_sharding), params)
     return pipeline, params
 
-def generate_from_prompts(pipeline, params, prompts: list[str]):
+def generate_from_prompts(pipeline, params, prompts: list[str], iterations):
     global key
     key, subkey = jax.random.split(key)
     prompt_ids = pipeline.prepare_inputs(prompts)
     prompt_ids = jax.device_put(prompt_ids, sharding)
-    images = pipeline(prompt_ids, params, subkey, num_inference_steps=1000, guidance_scale=np.array([7.5]))
+    images = pipeline(prompt_ids, params, subkey, num_inference_steps=iterations, guidance_scale=np.array([7.5]))
     images = images.images.reshape((images.images.shape[0],) + images.images.shape[-3:])
     out = [Image.fromarray((image * 255.).astype(np.uint8)) for image in images]
     return out
-
-def random_string(length=64):
-    candidates = string.ascii_letters + string.digits
-    name = ''.join(random.choices(candidates, k=length))
-    return name
 
 def save_images(images, prompts, save_dir):
     with open(save_dir + f'/{random_string()}.csv', 'w') as f:
         writer = csv.DictWriter(f, fieldnames=['image', 'caption'])
         writer.writeheader() 
-        for image, prompt in zip(images, prompts):
-            name = random_string() + '.png'
+        for idx, (image, prompt) in enumerate(zip(images, prompts)):
+            name = str(idx) + '.png'
             image.save(save_dir + '/' + name, format='PNG')
             writer.writerow(dict(image=name, caption=prompt))
 
 def load_prompts():
-    with open('checklist.txt', 'a+') as f:
-        f.seek(0)
-        check_list = f.read().split()
-        print(f'Found {len(check_list)} processed files')
 
     def mapper(example):
         out = example['raw'] + example['raw_1'] + example['raw_2'] + example['raw_3'] + example['raw_4']
-        with open('checklist.txt', 'a') as f:
-            f.write(' ' + ' '.join(example['raw_filename']))
         return out
-
-    def filter_out(example):
-        return all(existing_file not in check_list for existing_file in example['raw_filename'])
         
     ds = load_dataset('KhangTruong/NWPU_Split')['train']
     iterables = ds.iter(batch_size=32, drop_last_batch=True)
-    return map(mapper, filter(filter_out, iterables))
+    return map(mapper, iterables)
 
 pipeline, params = load_model()
 promptss = load_prompts()
-
-for prompts in promptss:
-    directory = save_dir + '/' + random_string()
-    os.mkdir(directory)
-    images = generate_from_prompts(pipeline, params, prompts)
+prompts = next(promptss)
+for iterations in [1, 2, 4, 8, 16, 32, 1000]:
+    directory = save_dir + '/it' + str(iterations) 
+    os.makedirs(directory, exist_ok=True)
+    images = generate_from_prompts(pipeline, params, prompts, iterations)
     save_images(images, prompts, directory)
     subprocess.run(f'gsutil -m cp -r {directory} {gcs_dir}/generated/ &', shell=True)
-    subprocess.run(f'gsutil cp checklist.txt {gcs_dir}/checklist.txt &', shell=True)

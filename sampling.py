@@ -57,13 +57,14 @@ def load_prompts():
         return out
         
     ds = load_dataset('KhangTruong/NWPU_Split')['train']
-    iterables = ds.iter(batch_size=32, drop_last_batch=True)
+    iterables = ds.iter(batch_size=16, drop_last_batch=True)
     return map(mapper, iterables)
 
 pipeline, params = load_model()
 promptss = load_prompts()
 prompts = next(promptss)
 for iterations in [2, 4, 8, 16, 32, 1000]:
+    print(f'Sampling: {iterations =}')
     directory = save_dir + '/it' + str(iterations) 
     os.makedirs(directory, exist_ok=True)
     images = generate_from_prompts(pipeline, params, prompts, iterations)

@@ -42,13 +42,9 @@ def generate_from_prompts(pipeline, params, prompts: list[str], iterations):
     return out
 
 def save_images(images, prompts, save_dir):
-    with open(save_dir + f'/{random_string()}.csv', 'w') as f:
-        writer = csv.DictWriter(f, fieldnames=['image', 'caption'])
-        writer.writeheader() 
-        for idx, (image, prompt) in enumerate(zip(images, prompts)):
-            name = str(idx) + '.png'
-            image.save(save_dir + '/' + name, format='PNG')
-            writer.writerow(dict(image=name, caption=prompt))
+    for idx, (image, prompt) in enumerate(zip(images, prompts)):
+        name = str(idx) + '.png'
+        image.save(save_dir + '/' + name, format='PNG')
 
 def load_prompts():
 

@@ -63,7 +63,7 @@ def load_prompts():
 pipeline, params = load_model()
 promptss = load_prompts()
 prompts = next(promptss)
-for iterations in [8, 16, 32, 1000]:
+for iterations in [2, 4, 8, 16, 32, 1000]:
     directory = save_dir + '/it' + str(iterations) 
     os.makedirs(directory, exist_ok=True)
     images = generate_from_prompts(pipeline, params, prompts, iterations)

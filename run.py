@@ -81,7 +81,7 @@ promptss = load_prompts()
 
 for prompts in promptss:
     directory = save_dir + '/' + random_string()
-    os.mkdir(directory)
+    os.makedirs(directory, exist_ok=True)
     images = generate_from_prompts(pipeline, params, prompts)
     save_images(images, prompts, directory)
     subprocess.run(f'gsutil -m cp -r {directory} {gcs_dir}/generated/ &', shell=True)

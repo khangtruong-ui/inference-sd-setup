@@ -168,6 +168,7 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
         )
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1) if getattr(self, "vae", None) else 8
         self.jit_func = None
+        self.jit_text_encoder = None
 
     def prepare_inputs(self, prompt: Union[str, List[str]]):
         if not isinstance(prompt, (str, list)):
@@ -232,8 +233,13 @@ class FlaxStableDiffusionPipeline(FlaxDiffusionPipeline):
             raise ValueError(f"`height` and `width` have to be divisible by 8 but are {height} and {width}.")
 
         # get prompt text embeddings
-        prompt_embeds = self.text_encoder(prompt_ids, params=params["text_encoder"])[0]
+        @jax.jit
+        def _jit_text_encoder(prompt_ids):
+            prompt_embeds = self.text_encoder(prompt_ids, params=params["text_encoder"])[0]
+            return prompt_embeds
 
+        self.jit_text_encoder = self.jit_text_encoder or _jit_text_encoder
+        prompt_embeds = self.jit_text_encoder(prompt_ids)
         # TODO: currently it is assumed `do_classifier_free_guidance = guidance_scale > 1.0`
         # implement this conditional `do_classifier_free_guidance = guidance_scale > 1.0`
         batch_size = prompt_ids.shape[0]

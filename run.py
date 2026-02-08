@@ -49,7 +49,7 @@ def random_string(length=64):
     name = ''.join(random.choices(candidates, k=length))
     return name
 
-def save_images(images, prompts, save_dir):
+def save_images(images, prompts, save_dir, gcs_dir):
     with open(save_dir + f'/{random_string()}.csv', 'w') as f:
         writer = csv.DictWriter(f, fieldnames=['image', 'caption'])
         writer.writeheader() 
@@ -58,6 +58,9 @@ def save_images(images, prompts, save_dir):
                 name = random_string() + '.png'
                 executor.submit(image.save, save_dir + '/' + name, format='PNG')
                 writer.writerow(dict(image=name, caption=prompt))
+
+    subprocess.run(f'gsutil -m cp -r {save_dir} {gcs_dir}/generated/ &', shell=True)
+    subprocess.run(f'gsutil cp checklist.txt {gcs_dir}/checklist.txt &', shell=True)
 
 def load_prompts():
     with open('checklist.txt', 'a+') as f:
@@ -81,10 +84,9 @@ def load_prompts():
 pipeline, params = load_model()
 promptss = load_prompts()
 
-for prompts in promptss:
-    directory = save_dir + '/' + random_string()
-    os.makedirs(directory, exist_ok=True)
-    images = generate_from_prompts(pipeline, params, prompts)
-    save_images(images, prompts, directory)
-    subprocess.run(f'gsutil -m cp -r {directory} {gcs_dir}/generated/ &', shell=True)
-    subprocess.run(f'gsutil cp checklist.txt {gcs_dir}/checklist.txt &', shell=True)
+with concurrent.futures.ProcessPoolExecutor(max_workers=32) as pexecutor:
+    for prompts in promptss:
+        directory = save_dir + '/' + random_string()
+        os.makedirs(directory, exist_ok=True)
+        images = generate_from_prompts(pipeline, params, prompts)
+        pexecutor.submit(save_images, images, prompts, directory, gcs_dir)

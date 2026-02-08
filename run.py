@@ -20,6 +20,7 @@ import string
 import csv
 import subprocess
 from datasets import load_dataset
+import concurrent.futures
 
 key = jax.random.key(0)
 mesh = jax.sharding.Mesh(jax.devices(), ('data',))
@@ -52,10 +53,11 @@ def save_images(images, prompts, save_dir):
     with open(save_dir + f'/{random_string()}.csv', 'w') as f:
         writer = csv.DictWriter(f, fieldnames=['image', 'caption'])
         writer.writeheader() 
-        for image, prompt in zip(images, prompts):
-            name = random_string() + '.png'
-            image.save(save_dir + '/' + name, format='PNG')
-            writer.writerow(dict(image=name, caption=prompt))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
+            for image, prompt in zip(images, prompts):
+                name = random_string() + '.png'
+                executor.submit(image.save, save_dir + '/' + name, format='PNG')
+                writer.writerow(dict(image=name, caption=prompt))
 
 def load_prompts():
     with open('checklist.txt', 'a+') as f:
@@ -73,7 +75,7 @@ def load_prompts():
         return all(existing_file not in check_list for existing_file in example['raw_filename'])
         
     ds = load_dataset('KhangTruong/NWPU_Split')['train']
-    iterables = ds.iter(batch_size=64 + 16, drop_last_batch=True)
+    iterables = ds.iter(batch_size=64, drop_last_batch=True)
     return map(mapper, filter(filter_out, iterables))
 
 pipeline, params = load_model()

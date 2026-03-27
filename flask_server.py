@@ -16,7 +16,7 @@ if not MODEL_DIR:
     raise ValueError("Set STABLE_DIFFUSION_DIRECTORY")
 
 NUM_DEVICES = len(jax.devices())
-BATCH_SIZE = 64 * NUM_DEVICES
+BATCH_SIZE = 32 * NUM_DEVICES
 
 print(f"Using {NUM_DEVICES} devices")
 print(f"Global batch size = {BATCH_SIZE}")

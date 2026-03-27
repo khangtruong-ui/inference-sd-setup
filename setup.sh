@@ -1,4 +1,4 @@
-pip install -q jax[tpu] flax optax transformers==4.57.3 datasets diffusers==0.36 torch torchvision Pillow -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+pip install -q jax[tpu] flax optax transformers==4.57.3 datasets diffusers==0.36 torch torchvision Pillow flask -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 
 DIFF_PATH=$(pip list -v | grep diffusers | awk '{print $3}')
 echo "INSTALLED DIFFUSER: $DIFF_PATH"

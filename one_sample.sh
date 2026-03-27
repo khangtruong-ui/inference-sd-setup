@@ -1,0 +1,1 @@
+url -X POST http://localhost:8000/generate   -H "Content-Type: application/json"   -d '{"prompt": "a beach with a building nearby"}'   --output out.png

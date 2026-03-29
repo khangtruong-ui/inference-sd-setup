@@ -56,7 +56,7 @@ def run_batch(prompts):
         prompt_ids,
         params,
         subkey,
-        num_inference_steps=400,
+        num_inference_steps=100,
         guidance_scale=np.array([7.5]),
         height=256,
         width=256

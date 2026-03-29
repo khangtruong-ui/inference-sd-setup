@@ -43,7 +43,7 @@ print("Model loaded.")
 # =========================
 # CORE BATCH GENERATION
 # =========================
-def run_batch(prompts):
+def run_batch(prompts, iterations=100):
     global key
 
     with key_lock:
@@ -56,7 +56,7 @@ def run_batch(prompts):
         prompt_ids,
         params,
         subkey,
-        num_inference_steps=100,
+        num_inference_steps=iterations,
         guidance_scale=np.array([7.5]),
         height=256,
         width=256
@@ -70,7 +70,7 @@ def run_batch(prompts):
 # =========================
 # SMART BATCH HANDLER
 # =========================
-def generate_images(prompts):
+def generate_images(prompts, iterations=100):
     results = []
 
     for i in range(0, len(prompts), BATCH_SIZE):
@@ -81,7 +81,7 @@ def generate_images(prompts):
             pad_count = BATCH_SIZE - len(chunk)
             chunk = chunk + chunk[:1] * pad_count
 
-        images = run_batch(chunk)
+        images = run_batch(chunk, iterations=iterations)
 
         # remove padded outputs
         results.extend(images[:len(old_chunk)])
@@ -100,6 +100,13 @@ def generate():
     if not data:
         return jsonify({"error": "Missing JSON"}), 400
 
+    # Get iterations from request, default to 100
+    iterations = data.get("iterations", 100)
+    try:
+        iterations = int(iterations)
+    except (ValueError, TypeError):
+        return jsonify({"error": "iterations must be an integer"}), 400
+
     # support single or batch
     if "prompt" in data:
         prompts = [data["prompt"]]
@@ -109,7 +116,7 @@ def generate():
         return jsonify({"error": "Provide 'prompt' or 'prompts'"}), 400
 
     try:
-        images = generate_images(prompts)
+        images = generate_images(prompts, iterations=iterations)
 
         # single image → return PNG
         if len(images) == 1:
